@@ -1,0 +1,8 @@
+venv/ # Ignore virtual environment directory
+__pycache__/ # Ignore Python cache files
+*.pyc # Ignore compiled Python files
+*.pyo # Ignore optimized Python files
+*.pyd # Ignore Python dynamic module files
+.venv/ 3 # Ignore another common virtual environment directory
+*.env # Ignore environment variable files
+python-generators-0x00/test.py # Ignore test script
