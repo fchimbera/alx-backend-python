@@ -1,0 +1,17 @@
+__pycache__/ # Python cache directory
+*.py[cod] # Compiled Python files
+*.pyo # Optimized Python files
+*.pyd # Python dynamic module
+*.so # Shared object files
+*.egg # Python egg files
+*.egg-info/ # Python egg metadata directory
+*.whl # Python wheel files
+*.dist-info/ # Python distribution metadata directory
+venv/ # Virtual environment directory
+.env # Environment variable file
+.env.local # Local environment variable file
+.env.development # Development environment variable file
+.env.test # Test environment variable file
+.env.production # Production environment variable file
+*.log # Log files
+Python-generators-0x00/test.py # Test files
