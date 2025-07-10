@@ -14,4 +14,6 @@ venv/ # Virtual environment directory
 .env.test # Test environment variable file
 .env.production # Production environment variable file
 *.log # Log files
-Python-generators-0x00/test.py # Test files
+python-generators-0x00/test.py # Test files
+python-decorators-0x01/db_setup.py # Database setup file
+python-decorators-0x01/query_log.txt # Query log file
