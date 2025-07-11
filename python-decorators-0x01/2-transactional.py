@@ -1,0 +1,59 @@
+import sqlite3
+import functools
+
+
+def with_db_connection(func):
+   
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        conn = None  # Initialize conn to None
+        try:
+            # Establish a connection to the SQLite database
+            conn = sqlite3.connect('users.db')
+            
+            result = func(conn, *args, **kwargs)
+            return result
+        except sqlite3.Error as e:
+            print(f"Database error occurred: {e}")
+            return None # Or re-raise the exception, depending on desired error handling
+        finally:
+            # Ensure the connection is closed, even if an error occurred
+            if conn:
+                conn.close()
+                # print("Database connection closed.") # Uncomment for debugging
+    return wrapper
+
+def transactional(func):
+    
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Ensure the first argument is a database connection
+        if not args:
+            raise TypeError(
+                "The 'transactional' decorator expects the decorated function "
+                "to receive a database connection object as its first argument."
+            )
+
+        connection = args[0] # Assuming connection is the first argument
+
+        result = None
+        try:
+            # print(f"\n--- Starting transaction for '{func.__name__}' ---") # Optional: for debugging
+            result = func(*args, **kwargs)
+            connection.commit()
+            # print(f"--- Transaction for '{func.__name__}' committed ---") # Optional: for debugging
+        except Exception as e:
+            connection.rollback()
+            # print(f"--- Transaction for '{func.__name__}' rolled back due to error: {e} ---") # Optional: for debugging
+            raise  # Re-raise the exception after rollback
+        return result
+    return wrapper
+
+@with_db_connection
+@transactional
+def update_user_email(conn, user_id, new_email):
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user_id))
+    #### Update user's email with automatic transaction handling
+
+update_user_email(user_id=1, new_email='Crawford_Cartwrightt@hotmail.com')
