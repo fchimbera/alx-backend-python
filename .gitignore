@@ -8,6 +8,7 @@ __pycache__/ # Python cache directory
 *.whl # Python wheel files
 *.dist-info/ # Python distribution metadata directory
 venv/ # Virtual environment directory
+.venv/ # Another virtual environment directory
 .env # Environment variable file
 .env.local # Local environment variable file
 .env.development # Development environment variable file
@@ -17,3 +18,4 @@ venv/ # Virtual environment directory
 python-generators-0x00/test.py # Test files
 python-decorators-0x01/db_setup.py # Database setup file
 python-decorators-0x01/query_log.txt # Query log file
+requirements.txt # Python package requirements file
