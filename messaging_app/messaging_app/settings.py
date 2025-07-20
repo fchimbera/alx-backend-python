@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',  # Added for REST framework support
+    'rest_framework', 
+    'django_filters',  # Ensure django_filters is installed
     'chats.apps.ChatsConfig',  # Your app name, adjust as necessary
 ]
 
