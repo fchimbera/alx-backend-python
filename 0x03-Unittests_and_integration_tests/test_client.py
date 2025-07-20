@@ -112,3 +112,23 @@ class TestGithubOrgClient(unittest.TestCase):
 
             # Assert that the list of repos matches the expected list
             self.assertEqual(result_repos, expected_repos)
+
+    @parameterized.expand([
+        ({"license": {"key": "my_license"}}, "my_license", True),
+        ({"license": {"key": "other_license"}}, "my_license", False),
+        ({"license": {"key": "my_license"}, "name": "repo"}, "my_license", True),
+        ({"license": {"key": "other_license"}, "name": "repo"}, "my_license", False),
+        ({}, "my_license", False), # Test with no license key
+        ({"license": {}}, "my_license", False), # Test with empty license dict
+        ({"license": {"key": None}}, "my_license", False) # Test with None license key
+    ])
+    def test_has_license(self, repo, license_key, expected_return):
+        """
+        Tests that GithubOrgClient.has_license returns the correct boolean value.
+        """
+        # Call the static method has_license directly
+        result = GithubOrgClient.has_license(repo, license_key)
+
+        # Assert that the result matches the expected return value
+        self.assertEqual(result, expected_return)
+        
