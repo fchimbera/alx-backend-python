@@ -38,9 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',  # Added for REST framework support
-    'messaging_app',
-     # Include MySQL client if needed
-    # Your app name, adjust as necessary
+    'chats.apps.ChatsConfig',  # Your app name, adjust as necessary
 ]
 
 REST_FRAMEWORK = {
