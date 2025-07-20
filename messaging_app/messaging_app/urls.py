@@ -21,4 +21,5 @@ from django.urls import include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/chats/', include('chats.urls')),  # Include URLs from the chats app
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')), # For browsable API authentication
 ]
