@@ -230,3 +230,4 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         self.mock_get.assert_any_call(org_url)
         self.mock_get.assert_any_call(repos_url)
         self.assertEqual(self.mock_get.call_count, 2)
+
