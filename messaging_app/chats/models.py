@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import Group, Permission # Import Group and Permission if not already
 
 class User(AbstractUser):
     """
@@ -8,7 +9,6 @@ class User(AbstractUser):
     This model includes additional fields as per the specification.
     """
     # Override the primary key to use UUID as specified
-    # AbstractUser already provides username, first_name, last_name, email, password, is_staff, is_active, date_joined
     user_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -37,6 +37,26 @@ class User(AbstractUser):
         help_text="Role of the user (guest, host, or admin)"
     )
 
+    groups = models.ManyToManyField(
+        Group,
+        verbose_name=('groups'),
+        blank=True,
+        help_text=(
+            'The groups this user belongs to. A user will get all permissions '
+            'granted to each of their groups.'
+        ),
+        related_name="chats_user_set", # Unique related_name for your custom User model
+        related_query_name="chats_user",
+    )
+    user_permissions = models.ManyToManyField(
+        Permission,
+        verbose_name=('user permissions'),
+        blank=True,
+        help_text=('Specific permissions for this user.'),
+        related_name="chats_user_permissions_set", # Unique related_name for your custom User model
+        related_query_name="chats_user_permission",
+    )
+
 
     class Meta:
         verbose_name = "User"
@@ -48,7 +68,10 @@ class User(AbstractUser):
 
 
 class Conversation(models.Model):
-    
+    """
+    Model to track conversations between users.
+    A conversation involves multiple participants.
+    """
     conversation_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -117,5 +140,4 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message from {self.sender.email} in Conversation {self.conversation.conversation_id} at {self.sent_at.strftime('%Y-%m-%d %H:%M')}"
-
 

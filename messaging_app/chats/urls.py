@@ -1,5 +1,5 @@
 from django.urls import path, include
-from rest_framework import routers 
+from rest_framework_nested import routers
 from .views import ConversationViewSet, MessageViewSet
 
 # Create a DefaultRouter for top-level resources (e.g., /conversations/)
