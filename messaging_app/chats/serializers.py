@@ -1,14 +1,13 @@
 from rest_framework import serializers
-from rest_framework import serializers
 from .models import User, Conversation, Message
 
+
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the custom User model.
-    Exposes essential user information and a calculated full_name.
-    """
-    # Adding a SerializerMethodField for a combined full name
+    
     full_name = serializers.SerializerMethodField()
+
+    # It mirrors the 'email' field but is declared separately for demonstration.
+    email_display = serializers.CharField(source='email', read_only=True, help_text="A read-only display of the user's email.")
 
     class Meta:
         model = User
@@ -17,20 +16,22 @@ class UserSerializer(serializers.ModelSerializer):
             'username',
             'first_name',
             'last_name',
-            'full_name', # Include the new field here
+            'full_name',
             'email',
+            'email_display', # Include the new explicit CharField here
             'phone_number',
             'role',
             'date_joined',
         ]
-        read_only_fields = ['user_id', 'date_joined', 'full_name'] # full_name is also read-only
+        read_only_fields = ['user_id', 'date_joined', 'full_name', 'email_display']
+
 
     def get_full_name(self, obj):
         """
         Returns the combined first_name and last_name of the user.
         """
         return f"{obj.first_name} {obj.last_name}".strip()
-    
+
 
 class MessageSerializer(serializers.ModelSerializer):
     """
@@ -95,7 +96,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             'participants',
             'participant_ids',
             'messages',
-            'last_message_preview', # Include the new field here
+            'last_message_preview',
             'created_at'
         ]
         read_only_fields = ['conversation_id', 'created_at', 'last_message_preview']
@@ -106,7 +107,6 @@ class ConversationSerializer(serializers.ModelSerializer):
         """
         last_message = obj.messages.order_by('-sent_at').first()
         if last_message:
-            # You can customize the length of the preview
             return last_message.message_body[:50] + '...' if len(last_message.message_body) > 50 else last_message.message_body
         return None
 
