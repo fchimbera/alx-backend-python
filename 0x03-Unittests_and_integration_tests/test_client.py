@@ -1,62 +1,41 @@
 #!/usr/bin/env python3
 """
-Client for interacting with the GitHub API.
+Unit tests for the GithubOrgClient class.
 """
-from utils import get_json
+import unittest
+from unittest.mock import patch, Mock
+from parameterized import parameterized
+from client import GithubOrgClient
 
 
-class GithubOrgClient:
+class TestGithubOrgClient(unittest.TestCase):
     """
-    A client to interact with the GitHub Organizations API.
+    TestGithubOrgClient class to test the GithubOrgClient.
     """
-    def __init__(self, org_name: str):
-        """
-        Initializes a GithubOrgClient instance.
 
-        Args:
-            org_name (str): The name of the GitHub organization.
-        """
-        self._org_name = org_name
+    @parameterized.expand([
+        ("google",),
+        ("abc",),
+    ])
+    @patch('client.get_json')
+    def test_org(self, org_name: str, mock_get_json: Mock) -> None:
+        
+        # Define the expected payload for the mocked get_json call
+        expected_payload = {"login": org_name, "id": 12345}
+        mock_get_json.return_value = expected_payload
 
-    def org(self) -> dict:
-        """
-        Retrieves the organization's information from the GitHub API.
+        # Create an instance of GithubOrgClient
+        client = GithubOrgClient(org_name)
 
-        Returns:
-            dict: A dictionary containing the organization's data.
-        """
-        # Construct the URL for the organization's API endpoint
-        org_url = f"https://api.github.com/orgs/{self._org_name}"
-        # Call get_json to fetch the data
-        return get_json(org_url)
-#!/usr/bin/env python3
-"""
-Client for interacting with the GitHub API.
-"""
-from utils import get_json
+        # Call the org method
+        result = client.org()
 
+        # Construct the expected URL that get_json should have been called with
+        expected_url = f"https://api.github.com/orgs/{org_name}"
 
-class GithubOrgClient:
-    """
-    A client to interact with the GitHub Organizations API.
-    """
-    def __init__(self, org_name: str):
-        """
-        Initializes a GithubOrgClient instance.
+        # Assert that get_json was called exactly once with the expected URL
+        mock_get_json.assert_called_once_with(expected_url)
 
-        Args:
-            org_name (str): The name of the GitHub organization.
-        """
-        self._org_name = org_name
+        # Assert that the result matches the expected payload
+        self.assertEqual(result, expected_payload)
 
-    def org(self) -> dict:
-        """
-        Retrieves the organization's information from the GitHub API.
-
-        Returns:
-            dict: A dictionary containing the organization's data.
-        """
-        # Construct the URL for the organization's API endpoint
-        org_url = f"https://api.github.com/orgs/{self._org_name}"
-        # Call get_json to fetch the data
-        return get_json(org_url)
