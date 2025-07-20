@@ -112,4 +112,3 @@ class TestGithubOrgClient(unittest.TestCase):
 
             # Assert that the list of repos matches the expected list
             self.assertEqual(result_repos, expected_repos)
-
