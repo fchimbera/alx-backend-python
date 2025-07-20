@@ -20,7 +20,9 @@ class TestAccessNestedMap(unittest.TestCase):
         ({"a": {"b": 2}}, ("a",), {"b": 2}),
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
-    def test_access_nested_map(self, nested_map: dict, path: tuple, expected: any) -> None:
+    def test_access_nested_map(self, nested_map: dict,
+                               path: tuple,
+                               expected: any) -> None:
         """
         Tests that the access_nested_map function returns the expected result
         for various valid nested map and path inputs.
@@ -31,14 +33,16 @@ class TestAccessNestedMap(unittest.TestCase):
         ({}, ("a",), KeyError),
         ({"a": 1}, ("a", "b"), KeyError),
     ])
-    def test_access_nested_map_exception(self, nested_map: dict, path: tuple, expected_exception: type) -> None:
+    def test_access_nested_map_exception(self, nested_map: dict,
+                                         path: tuple,
+                                         expected_exception: type) -> None:
         """
         Tests that the access_nested_map function raises a KeyError
         with the expected message for invalid inputs.
         """
         with self.assertRaises(expected_exception) as cm:
             access_nested_map(nested_map, path)
-        # Check the exception message for the specific key that caused the error
+        # Check exception message for the specific key
         if path == ("a",):
             self.assertEqual(str(cm.exception), "'a'")
         elif path == ("a", "b"):
@@ -66,7 +70,7 @@ class TestGetJson(unittest.TestCase):
         with patch('requests.get', return_value=mock_response) as mock_get:
             result = get_json(test_url)
 
-            # Assert that requests.get was called exactly once with the test_url
+            # Assert requests.get called once with the test_url
             mock_get.assert_called_once_with(test_url)
 
             # Assert that the output of get_json is equal to test_payload
@@ -79,8 +83,8 @@ class TestMemoize(unittest.TestCase):
     """
     def test_memoize(self) -> None:
         """
-        Tests that a_method is called only once when a_property is accessed twice,
-        demonstrating the memoization effect.
+        Tests that a_method is called only once when a_property is accessed
+        twice, demonstrating the memoization effect.
         """
         class TestClass:
             """
@@ -99,7 +103,8 @@ class TestMemoize(unittest.TestCase):
                 """
                 return self.a_method()
 
-        with patch.object(TestClass, 'a_method', return_value=42) as mock_method:
+        with patch.object(TestClass, 'a_method',
+                          return_value=42) as mock_method:
             test_instance = TestClass()
             # Call a_property twice
             result1 = test_instance.a_property
