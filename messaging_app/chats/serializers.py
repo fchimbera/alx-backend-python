@@ -1,57 +1,60 @@
 from rest_framework import serializers
-from .models import User,Conversation, Message
-
+from rest_framework import serializers
+from .models import User, Conversation, Message
 
 class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for the custom User model.
-    Exposes essential user information.
+    Exposes essential user information and a calculated full_name.
     """
+    # Adding a SerializerMethodField for a combined full name
+    full_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'user_id',
-            'username', # Inherited from AbstractUser
+            'username',
             'first_name',
             'last_name',
+            'full_name', # Include the new field here
             'email',
             'phone_number',
             'role',
-            'date_joined', # Equivalent to created_at from AbstractUser
+            'date_joined',
         ]
-        read_only_fields = ['user_id', 'date_joined'] # These fields are auto-generated
+        read_only_fields = ['user_id', 'date_joined', 'full_name'] # full_name is also read-only
 
+    def get_full_name(self, obj):
+        """
+        Returns the combined first_name and last_name of the user.
+        """
+        return f"{obj.first_name} {obj.last_name}".strip()
+    
 
 class MessageSerializer(serializers.ModelSerializer):
     """
     Serializer for the Message model.
     Includes nested sender information.
     """
-    # Nested serializer for the sender, making it read-only as we don't create/update
-    # users directly through message creation.
     sender = UserSerializer(read_only=True)
-
-    # To allow writing/creating messages, we need to specify how to handle the sender ID.
-    # This field will be used for input (e.g., when creating a new message).
-    # When creating, you'd pass a sender_id (UUID string).
     sender_id = serializers.UUIDField(write_only=True)
-    conversation_id = serializers.UUIDField(write_only=True) # For creating messages
+    conversation_id = serializers.UUIDField(write_only=True)
 
     class Meta:
         model = Message
         fields = [
             'message_id',
-            'sender',        # For reading (nested User object)
-            'sender_id',     # For writing (UUID string)
-            'conversation',  # For reading (nested Conversation object, if desired, but typically handled by ConversationSerializer)
-            'conversation_id', # For writing (UUID string)
+            'sender',
+            'sender_id',
+            'conversation',
+            'conversation_id',
             'message_body',
             'sent_at'
         ]
-        read_only_fields = ['message_id', 'sent_at', 'conversation'] # conversation is read-only here when nested
+        read_only_fields = ['message_id', 'sent_at', 'conversation']
 
     def create(self, validated_data):
-        # Extract sender_id and conversation_id from validated_data
         sender_id = validated_data.pop('sender_id')
         conversation_id = validated_data.pop('conversation_id')
 
@@ -63,7 +66,6 @@ class MessageSerializer(serializers.ModelSerializer):
         except Conversation.DoesNotExist:
             raise serializers.ValidationError({"conversation_id": "Conversation with this ID does not exist."})
 
-        # Create the message instance
         message = Message.objects.create(sender=sender, conversation=conversation, **validated_data)
         return message
 
@@ -71,23 +73,18 @@ class MessageSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     """
     Serializer for the Conversation model.
-    Handles many-to-many participants and nested messages.
+    Handles many-to-many participants, nested messages, and a last message preview.
     """
-    # Nested serializer for participants (many-to-many relationship).
-    # read_only=True because we typically manage participants through separate views/actions,
-    # not directly when creating/updating a conversation object itself via this serializer.
     participants = UserSerializer(many=True, read_only=True)
-
-    # Nested serializer for messages within this conversation (reverse foreign key).
-    # read_only=True because messages are created/updated via their own serializer/endpoint.
     messages = MessageSerializer(many=True, read_only=True)
 
-    # To allow adding participants when creating/updating a conversation,
-    # you might want a write-only field for participant IDs.
+    # Adding a SerializerMethodField for a preview of the last message
+    last_message_preview = serializers.SerializerMethodField()
+
     participant_ids = serializers.ListField(
         child=serializers.UUIDField(),
         write_only=True,
-        required=False, # Not required for every update
+        required=False,
         help_text="List of User UUIDs to add as participants."
     )
 
@@ -95,40 +92,46 @@ class ConversationSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = [
             'conversation_id',
-            'participants',      # For reading (nested User objects)
-            'participant_ids',   # For writing (list of UUIDs)
-            'messages',          # For reading (nested Message objects)
+            'participants',
+            'participant_ids',
+            'messages',
+            'last_message_preview', # Include the new field here
             'created_at'
         ]
-        read_only_fields = ['conversation_id', 'created_at']
+        read_only_fields = ['conversation_id', 'created_at', 'last_message_preview']
+
+    def get_last_message_preview(self, obj):
+        """
+        Returns a preview of the body of the most recent message in the conversation.
+        """
+        last_message = obj.messages.order_by('-sent_at').first()
+        if last_message:
+            # You can customize the length of the preview
+            return last_message.message_body[:50] + '...' if len(last_message.message_body) > 50 else last_message.message_body
+        return None
 
     def create(self, validated_data):
         participant_ids = validated_data.pop('participant_ids', [])
         conversation = Conversation.objects.create(**validated_data)
 
-        # Add participants to the conversation
         if participant_ids:
             users = User.objects.filter(user_id__in=participant_ids)
             if len(users) != len(participant_ids):
-                # Handle cases where some IDs might not correspond to existing users
                 raise serializers.ValidationError({"participant_ids": "One or more participant IDs are invalid."})
-            conversation.participants.set(users) # Use .set() for ManyToMany
+            conversation.participants.set(users)
 
         return conversation
 
     def update(self, instance, validated_data):
         participant_ids = validated_data.pop('participant_ids', None)
 
-        # Update standard fields
         instance.created_at = validated_data.get('created_at', instance.created_at)
-        # Add other fields if they were exposed for update
 
-        # Update participants if participant_ids are provided
         if participant_ids is not None:
             users = User.objects.filter(user_id__in=participant_ids)
             if len(users) != len(participant_ids):
                 raise serializers.ValidationError({"participant_ids": "One or more participant IDs are invalid."})
-            instance.participants.set(users) # Use .set() to replace current participants
+            instance.participants.set(users)
 
         instance.save()
         return instance
