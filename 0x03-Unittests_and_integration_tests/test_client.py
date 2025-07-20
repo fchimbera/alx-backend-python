@@ -142,42 +142,47 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
     """
     Integration tests for GithubOrgClient.public_repos.
     """
-    # Removed setUpClass and tearDownClass for patching here.
-    # Patching will now happen in setUp/tearDown for each test method.
-
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
-        Set up mocks for requests.get before each test method.
-        This ensures a clean mock for every test.
+        Set up class-level mocks for requests.get.
+        This patcher will be started once for each parameterized class.
         """
-        self.get_patcher = patch('requests.get')
-        self.mock_get = self.get_patcher.start()
+        cls.get_patcher = patch('requests.get')
+        cls.mock_get = cls.get_patcher.start()
 
         # Define the side effect for requests.get
-        # It should return a Mock object that has a .json() method
-        # The .json() method then returns the appropriate fixture payload
         def side_effect_func(url):
             mock_response = Mock()
-            # Use self.org_payload and self.repos_payload as they are
-            # instance attributes now due to parameterized_class
-            if url == self.org_payload["repos_url"].replace("/repos", ""):
+            # Use cls.org_payload and cls.repos_payload as they are
+            # class attributes for each parameterized instance
+            if url == cls.org_payload["repos_url"].replace("/repos", ""):
                 # This is the URL for the organization data
-                mock_response.json.return_value = self.org_payload
-            elif url == self.org_payload["repos_url"]:
+                mock_response.json.return_value = cls.org_payload
+            elif url == cls.org_payload["repos_url"]:
                 # This is the URL for the repositories data
-                mock_response.json.return_value = self.repos_payload
+                mock_response.json.return_value = cls.repos_payload
             else:
                 # Fallback for unexpected URLs, can raise an error or return empty
                 mock_response.json.return_value = {}
             return mock_response
 
-        self.mock_get.side_effect = side_effect_func
+        cls.mock_get.side_effect = side_effect_func
 
-    def tearDown(self):
+    def setUp(self):
         """
-        Stop the patcher after each test method.
+        Reset the mock's call count and history before each test method.
+        This ensures a clean mock for every test within a parameterized class.
         """
-        self.get_patcher.stop()
+        self.mock_get.reset_mock()
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        Stop the patcher after all tests in the class have run.
+        This ensures the mock is properly cleaned up for each parameterized class.
+        """
+        cls.get_patcher.stop()
 
     def test_public_repos(self):
         """
@@ -225,4 +230,3 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         self.mock_get.assert_any_call(org_url)
         self.mock_get.assert_any_call(repos_url)
         self.assertEqual(self.mock_get.call_count, 2)
-
