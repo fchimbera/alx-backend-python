@@ -197,4 +197,3 @@ LOGGING = {
         'level': 'WARNING',
     },
 }
-
