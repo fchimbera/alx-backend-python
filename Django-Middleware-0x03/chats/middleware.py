@@ -1,5 +1,7 @@
 import logging
 from datetime import datetime
+from django.http import HttpResponseForbidden
+from django.utils import timezone # Import timezone for timezone-aware datetime
 
 # Get an instance of a logger
 # This logger will be configured in settings.py to write to 'requests.log'
@@ -38,5 +40,48 @@ class RequestLoggingMiddleware:
         response = self.get_response(request)
 
         # You can add post-response logging here if needed, but the task only specifies request logging.
+        return response
+
+
+class RestrictAccessByTimeMiddleware:
+    """
+    Custom middleware to restrict access to the application based on the time of day.
+    Access is denied between 9 PM (21:00) and 6 AM (06:00) server time.
+    """
+    def __init__(self, get_response):
+        """
+        Initializes the middleware.
+        Args:
+            get_response: The next middleware or the view function in the chain.
+        """
+        self.get_response = get_response
+
+    def __call__(self, request):
+        """
+        Checks the current server time and denies access if it's outside
+        the allowed hours (6 AM to 9 PM).
+        Args:
+            request: The HttpRequest object.
+        Returns:
+            HttpResponse: A Forbidden response if outside allowed hours,
+                          otherwise the response from the next middleware/view.
+        """
+        current_time = timezone.now() # Get timezone-aware current time
+        current_hour = current_time.hour
+
+        # Define the restricted hours: 9 PM (21:00) to 6 AM (06:00)
+        # Access is allowed between 6 AM (inclusive) and 9 PM (exclusive)
+        # So, deny if current_hour is 21, 22, 23, 0, 1, 2, 3, 4, 5
+        if current_hour >= 21 or current_hour < 6:
+            # Log the forbidden access attempt (optional, but good for auditing)
+            user = request.user.username if request.user.is_authenticated else 'Anonymous'
+            request_logger.warning(
+                f"Access denied for {user} at {current_time.strftime('%Y-%m-%d %H:%M:%S')} "
+                f"to {request.path} due to time restriction."
+            )
+            return HttpResponseForbidden("Access to the messaging app is restricted between 9 PM and 6 AM.")
+
+        # If within allowed hours, proceed to the next middleware or view
+        response = self.get_response(request)
         return response
 
