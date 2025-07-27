@@ -9,7 +9,8 @@ from .serializers import ConversationSerializer, MessageSerializer
 from django_filters import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers # Already added in previous fix, ensure it's here
-from .permissions import IsParticipantOrSender 
+from .permissions import IsParticipantOfConversation
+
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
@@ -17,7 +18,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     Supports listing, retrieving, creating, updating, and deleting conversations.
     Includes filtering capabilities.
     """
-    permission_classes = [IsAuthenticated, IsParticipantOrSender]
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     
     queryset = Conversation.objects.all().order_by('-created_at')
     serializer_class = ConversationSerializer
@@ -54,47 +55,29 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 
 class MessageViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows messages to be viewed or created.
-    Supports listing, retrieving, creating, updating, and deleting messages.
-    Includes filtering capabilities.
-    """
-    permission_classes = [IsAuthenticated, IsParticipantOrSender]
-    
-    queryset = Message.objects.all().order_by('sent_at')
+    queryset = Message.objects.all()
     serializer_class = MessageSerializer
-    permission_classes = [IsAuthenticated]
-
-    # Add filter backends and fields
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = {
-        'conversation__conversation_id': ['exact'], # Filter messages by conversation UUID
-        'sender__user_id': ['exact'], # Filter messages by sender UUID
-        'sent_at': ['exact', 'gte', 'lte', 'gt', 'lt'], # Example: filter by sent_at
-    }
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        conversation_id = self.request.query_params.get('conversation_id', None)
-
-        if conversation_id:
-            queryset = queryset.filter(conversation__conversation_id=conversation_id)
-
+        # ✅ Restrict messages to participant access only
         user = self.request.user
-        if user.is_authenticated:
-            queryset = queryset.filter(conversation__participants=user).distinct()
+        return Message.objects.filter(conversation__participants=user)
 
-        return queryset.order_by('sent_at')
+    def retrieve(self, request, *args, **kwargs):
+        message = self.get_object()
+        if request.user not in message.conversation.participants.all():
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        return super().retrieve(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
-        conversation_id = serializer.validated_data.get('conversation_id')
-        try:
-            conversation = get_object_or_404(Conversation, conversation_id=conversation_id)
-        except Exception as e:
-            raise serializers.ValidationError({"conversation_id": "Invalid conversation ID."})
+    def update(self, request, *args, **kwargs):
+        message = self.get_object()
+        if request.user not in message.conversation.participants.all():
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
 
-        if self.request.user.is_authenticated and self.request.user not in conversation.participants.all():
-            raise serializers.ValidationError("You are not a participant of this conversation.")
-
-        serializer.save(sender=self.request.user, conversation=conversation)
-
+    def destroy(self, request, *args, **kwargs):
+        message = self.get_object()
+        if request.user not in message.conversation.participants.all():
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
