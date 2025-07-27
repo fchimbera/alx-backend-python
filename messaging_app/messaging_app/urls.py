@@ -17,9 +17,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.urls import include
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+from chats.auth import CustomTokenObtainPairView
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/chats/', include('chats.urls')),  # Include URLs from the chats app
-    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')), # For browsable API authentication
+    path('api/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/chats/', include('chats.urls')),
 ]

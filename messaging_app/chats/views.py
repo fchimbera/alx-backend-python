@@ -9,6 +9,7 @@ from .serializers import ConversationSerializer, MessageSerializer
 from django_filters import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers # Already added in previous fix, ensure it's here
+from .permissions import IsParticipantOrSender 
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
@@ -16,6 +17,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     Supports listing, retrieving, creating, updating, and deleting conversations.
     Includes filtering capabilities.
     """
+    permission_classes = [IsAuthenticated, IsParticipantOrSender]
+    
     queryset = Conversation.objects.all().order_by('-created_at')
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
@@ -56,6 +59,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     Supports listing, retrieving, creating, updating, and deleting messages.
     Includes filtering capabilities.
     """
+    permission_classes = [IsAuthenticated, IsParticipantOrSender]
+    
     queryset = Message.objects.all().order_by('sent_at')
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated]
