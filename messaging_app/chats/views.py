@@ -10,7 +10,8 @@ from django_filters import filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import serializers # Already added in previous fix, ensure it's here
 from .permissions import IsParticipantOfConversation
-
+from .pagination import MessagePagination
+from .filters import MessageFilter
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
@@ -58,6 +59,12 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all()
     serializer_class = MessageSerializer
     permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+    pagination_class = MessagePagination
+
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_class = MessageFilter
+    ordering_fields = ['timestamp']
+    ordering = ['-timestamp']  # Most recent first
 
     def get_queryset(self):
         # ✅ Filter messages by conversations user is part of
