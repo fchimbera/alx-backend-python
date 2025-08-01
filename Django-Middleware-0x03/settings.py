@@ -79,6 +79,7 @@ MIDDLEWARE = [
     'chats.middleware.RequestLoggingMiddleware',
     # Custom middleware: RestrictAccessByTimeMiddleware
     'chats.middleware.RestrictAccessByTimeMiddleware', # Add your new custom middleware here
+    'chats.middleware.OffensiveLanguageMiddleware',
 ]
 
 ROOT_URLCONF = 'messaging_app.urls'
@@ -153,7 +154,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Logging configuration for RequestLoggingMiddleware
+# Logging configuration for Requ
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

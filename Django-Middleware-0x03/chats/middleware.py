@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponse
 from django.utils import timezone # Import timezone for timezone-aware datetime
 
 # Get an instance of a logger
@@ -85,3 +85,70 @@ class RestrictAccessByTimeMiddleware:
         response = self.get_response(request)
         return response
 
+class OffensiveLanguageMiddleware:
+    """
+    Middleware to limit the number of chat messages a user can send
+    within a specific time window, based on their IP address.
+    """
+    def __init__(self, get_response):
+        """
+        Initializes the middleware.
+        `get_response` is the next callable in the middleware chain.
+        """
+        self.get_response = get_response
+        # This dictionary will store the request timestamps for each IP address.
+        # Key: IP address (str)
+        # Value: List of timestamps (floats)
+        self.request_tracker = {}
+        # The rate limit is 5 requests per 60 seconds.
+        self.limit = 5
+        self.time_window = 60 # seconds
+
+    def __call__(self, request):
+        """
+        Middleware's core logic.
+        This method is called for every request.
+        """
+        # We only want to track POST requests, which simulate a new chat message.
+        if request.method == 'POST':
+            # Get the client's IP address.
+            # We check HTTP_X_FORWARDED_FOR for requests behind a proxy.
+            ip_address = request.META.get('HTTP_X_FORWARDED_FOR')
+            if ip_address:
+                # HTTP_X_FORWARDED_FOR can be a comma-separated list of IPs.
+                # The first one is the client's IP.
+                ip_address = ip_address.split(',')[0].strip()
+            else:
+                ip_address = request.META.get('REMOTE_ADDR')
+
+            if ip_address:
+                # Get the current time in seconds since the epoch.
+                current_time = time.time()
+
+                # If the IP address is not in our tracker, add it.
+                if ip_address not in self.request_tracker:
+                    self.request_tracker[ip_address] = []
+                
+                # Filter out any timestamps that are older than our time window.
+                # This ensures we only count messages from the last minute.
+                self.request_tracker[ip_address] = [
+                    t for t in self.request_tracker[ip_address]
+                    if current_time - t <= self.time_window
+                ]
+                
+                # Check if the number of requests in the time window exceeds the limit.
+                if len(self.request_tracker[ip_address]) >= self.limit:
+                    # If the limit is exceeded, return an HTTP 429 response.
+                    # This tells the user they have sent too many requests.
+                    return HttpResponse(
+                        "Rate limit exceeded. Please wait a moment before sending another message.",
+                        status=429
+                    )
+                else:
+                    # If the limit is not exceeded, add the current request's
+                    # timestamp to the tracker for this IP.
+                    self.request_tracker[ip_address].append(current_time)
+
+        # Pass the request to the next middleware or view.
+        response = self.get_response(request)
+        return response
