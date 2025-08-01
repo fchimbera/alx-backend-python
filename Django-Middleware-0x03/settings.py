@@ -80,6 +80,8 @@ MIDDLEWARE = [
     # Custom middleware: RestrictAccessByTimeMiddleware
     'chats.middleware.RestrictAccessByTimeMiddleware', # Add your new custom middleware here
     'chats.middleware.OffensiveLanguageMiddleware',
+    'chats.middleware.RolepermissionMiddleware',
+    
 ]
 
 ROOT_URLCONF = 'messaging_app.urls'

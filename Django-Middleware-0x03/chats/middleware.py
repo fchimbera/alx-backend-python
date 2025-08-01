@@ -152,3 +152,37 @@ class OffensiveLanguageMiddleware:
         # Pass the request to the next middleware or view.
         response = self.get_response(request)
         return response
+    
+    class RolepermissionMiddleware:
+    """
+    Middleware to check the user's role before allowing access to specific actions.
+    If the user is not an admin or moderator, it returns a 403 Forbidden error.
+    """
+    def __init__(self, get_response):
+        """
+        Initializes the middleware.
+        `get_response` is the next callable in the middleware chain.
+        """
+        self.get_response = get_response
+
+    def __call__(self, request):
+        """
+        Middleware's core logic.
+        This method is called for every request.
+        """
+        # Define a list of URL paths that require elevated permissions.
+        # This is a simple example; a real-world application might use a more sophisticated method.
+        protected_paths = ['/admin/', '/moderation/']
+
+        # Check if the requested path is in our list of protected paths.
+        if any(request.path.startswith(path) for path in protected_paths):
+            # Check if the user is authenticated and has staff status.
+            # `is_staff` is a good proxy for admin/moderator roles in a basic Django setup.
+            # A more complex system might check a custom user model's attributes.
+            if not request.user.is_authenticated or not request.user.is_staff:
+                # If the user is not authenticated or not a staff member, return a 403 Forbidden response.
+                return HttpResponseForbidden("You do not have permission to access this resource.")
+        
+        # If the user has permission or the path is not protected, proceed with the request.
+        response = self.get_response(request)
+        return response
