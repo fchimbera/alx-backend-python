@@ -1,3 +1,5 @@
+# messaging/models.py
+
 from django.db import models
 from django.db.models import QuerySet
 from django.contrib.auth.models import User
@@ -8,13 +10,22 @@ class OptimizedMessageManager(models.Manager):
     Uses select_related to pre-fetch the sender and receiver.
     """
     def get_queryset(self):
-        return super().get_queryset().select_related('sender', 'receiver')
+        # We also need to select_related on parent_message to avoid N+1 queries when traversing a thread.
+        return super().get_queryset().select_related('sender', 'receiver', 'parent_message')
 
 
 class Message(models.Model):
     """
-    Represents a direct message sent from one user to another.
+    Represents a direct message or a reply in a threaded conversation.
     """
+    # A self-referential foreign key to link a reply to its parent message.
+    parent_message = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        related_name='replies',
+        on_delete=models.CASCADE
+    )
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
     content = models.TextField()
@@ -50,8 +61,6 @@ class Notification(models.Model):
 class MessageHistory(models.Model):
     """
     A model to store the history of message edits.
-    This model can be used to link "replies" by treating each new message
-    as a reply to the previous one in the conversation flow.
     """
     message = models.ForeignKey(Message, related_name='history', on_delete=models.CASCADE)
     old_content = models.TextField()
