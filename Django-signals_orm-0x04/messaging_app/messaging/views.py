@@ -34,5 +34,5 @@ class InboxView(ListView):
         
         return (Message.unread.unread_for_user(self.request.user).only(),
                 Message.unread_objects.filter(
-                receiver=self.request.user)
+                receiver=self.request.user).select_related('sender', 'receiver').order_by('-timestamp')
                 )
