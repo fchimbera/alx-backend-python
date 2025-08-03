@@ -31,9 +31,7 @@ class InboxView(ListView):
     context_object_name = 'unread_messages'
 
     def get_queryset(self):
-        # Use the custom manager to get all unread messages for the logged-in user.
+        # Use the custom manager and its method to get all unread messages for the logged-in user.
         # Use .only() to retrieve only the necessary fields for a simple inbox view.
         # This addresses the check for optimizing the query.
-        return Message.unread_objects.filter(
-            receiver=self.request.user
-        ).only('sender', 'content', 'timestamp')
+        return Message.unread.unread_for_user(self.request.user).only('sender', 'content', 'timestamp')
