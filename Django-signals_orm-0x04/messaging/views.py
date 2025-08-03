@@ -32,6 +32,7 @@ class InboxView(ListView):
 
     def get_queryset(self):
         
-        return Message.unread_objects.filter(
-            receiver=self.request.user
-        ).only('sender', 'content', 'timestamp')
+        return (Message.unread.unread_for_user(self.request.user).only(),
+                Message.unread_objects.filter(
+                receiver=self.request.user)
+                )
