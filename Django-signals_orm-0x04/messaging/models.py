@@ -1,5 +1,15 @@
 from django.db import models
+from django.db.models import QuerySet
 from django.contrib.auth.models import User
+
+class OptimizedMessageManager(models.Manager):
+    """
+    A custom manager to handle advanced ORM queries for messages.
+    Uses select_related to pre-fetch the sender and receiver.
+    """
+    def get_queryset(self):
+        return super().get_queryset().select_related('sender', 'receiver')
+
 
 class Message(models.Model):
     """
@@ -9,9 +19,10 @@ class Message(models.Model):
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
-    # New fields to track edits.
     edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)
     edited_at = models.DateTimeField(null=True, blank=True)
+
+    objects = OptimizedMessageManager()
 
     class Meta:
         ordering = ['-timestamp']
@@ -39,10 +50,11 @@ class Notification(models.Model):
 class MessageHistory(models.Model):
     """
     A model to store the history of message edits.
+    This model can be used to link "replies" by treating each new message
+    as a reply to the previous one in the conversation flow.
     """
     message = models.ForeignKey(Message, related_name='history', on_delete=models.CASCADE)
     old_content = models.TextField()
-    # The user who performed the edit.
     edited_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     edited_at = models.DateTimeField(auto_now_add=True)
 

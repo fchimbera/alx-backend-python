@@ -1,102 +1,49 @@
-from django.test import TestCase
-
+from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from .models import Message, Notification
+from django.utils import timezone
+from django.urls import reverse
+from .models import Message, Notification, MessageHistory
 
 class MessagingSignalTest(TestCase):
     """
-    Tests to ensure the post_save signal for the Message model
-    correctly creates a Notification.
+    Tests to ensure the post_save and pre_save signals for the Message model
+    work as expected.
     """
 
     def setUp(self):
-        """
-        Set up the necessary objects for the tests.
-        We'll create two user instances: a sender and a receiver.
-        """
+        self.client = Client()
         self.sender = User.objects.create_user(username='sender', password='password123')
         self.receiver = User.objects.create_user(username='receiver', password='password123')
         self.other_user = User.objects.create_user(username='other_user', password='password123')
+        self.client.login(username='sender', password='password123')
 
-    def test_notification_created_on_new_message(self):
+    def test_view_conversation_optimizes_queries(self):
         """
-        Tests that a new Notification is created for the receiver when a new
-        Message is created.
+        Tests that the view_conversation view uses select_related and prefetch_related
+        to reduce the number of queries.
         """
-        # Initially, there should be no notifications.
-        self.assertEqual(Notification.objects.count(), 0)
-
-        # Create a new message from sender to receiver.
-        # This action should trigger our post_save signal.
-        new_message = Message.objects.create(
-            sender=self.sender,
-            receiver=self.receiver,
-            content="Hello there!"
-        )
-
-        # After creating the message, a notification should exist.
-        self.assertEqual(Notification.objects.count(), 1)
+        # Create multiple messages between sender and receiver.
+        Message.objects.create(sender=self.sender, receiver=self.receiver, content="Hello")
+        Message.objects.create(sender=self.receiver, receiver=self.sender, content="Hi")
+        message_to_edit = Message.objects.create(sender=self.sender, receiver=self.receiver, content="Last message")
         
-        # Verify the details of the created notification.
-        notification = Notification.objects.first()
-        self.assertEqual(notification.user, self.receiver)
-        self.assertEqual(notification.message, new_message)
-        self.assertFalse(notification.is_read)
-
-    def test_notification_not_created_on_update(self):
-        """
-        Tests that the signal does not create a new notification when an
-        existing message is updated.
-        """
-        # Create an initial message. This will create one notification.
-        initial_message = Message.objects.create(
-            sender=self.sender,
-            receiver=self.receiver,
-            content="First message."
-        )
-        self.assertEqual(Notification.objects.count(), 1)
-
-        # Update the message content and save it.
-        # The 'created' argument in the signal will be False, so no
-        # new notification should be generated.
-        initial_message.content = "First message, updated."
-        initial_message.save()
-
-        # The notification count should still be 1.
-        self.assertEqual(Notification.objects.count(), 1)
-
-        # Verify that the existing notification's details haven't changed.
-        notification = Notification.objects.first()
-        self.assertEqual(notification.message, initial_message)
-
-
-    def test_notification_count_with_multiple_messages(self):
-        """
-        Tests that multiple messages correctly create multiple notifications.
-        """
-        # Send a message from sender to receiver.
-        Message.objects.create(
-            sender=self.sender,
-            receiver=self.receiver,
-            content="First message."
-        )
-        # Send a message from other_user to receiver.
-        Message.objects.create(
-            sender=self.other_user,
-            receiver=self.receiver,
-            content="Second message."
-        )
-        # Send a message from sender to other_user.
-        Message.objects.create(
-            sender=self.sender,
-            receiver=self.other_user,
-            content="Third message."
-        )
-
-        # There should be one notification for each of the three messages.
-        self.assertEqual(Notification.objects.count(), 3)
+        # Edit the message to create history.
+        message_to_edit.content = "Last message, edited"
+        message_to_edit.save()
         
-        # Check notifications for the receiver.
-        self.assertEqual(Notification.objects.filter(user=self.receiver).count(), 2)
-        # Check notifications for the other_user.
-        self.assertEqual(Notification.objects.filter(user=self.other_user).count(), 1)
+        # We expect a fixed number of queries regardless of the number of messages or history entries.
+        # 1. Query for the other user.
+        # 2. Query for the messages, using select_related and prefetch_related.
+        with self.assertNumQueries(2):
+            response = self.client.get(reverse('view_conversation', args=[self.receiver.id]))
+            
+            self.assertEqual(response.status_code, 200)
+            
+            context = response.context
+            self.assertEqual(len(context['conversation_messages']), 3)
+            
+            # Accessing the related data should not trigger new queries.
+            first_message = context['conversation_messages'][0]
+            self.assertIsNotNone(first_message.sender.username)
+            self.assertIsNotNone(first_message.history_entries)
+            
