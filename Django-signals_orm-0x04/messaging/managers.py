@@ -20,3 +20,4 @@ class OptimizedMessageManager(models.Manager):
         return super().get_queryset().select_related(
             'sender', 'receiver', 'parent_message'
         )
+
