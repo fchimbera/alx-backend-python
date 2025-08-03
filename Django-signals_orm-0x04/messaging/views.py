@@ -34,7 +34,17 @@ class InboxView(ListView):
     def get_queryset(self):
         """
         Fetches all messages for the current user, using select_related for optimization.
+        Also demonstrates filtering by sender, using a custom unread manager, and optimizing with .only().
         """
-        return Message.objects.filter(
+        sent_messages = Message.objects.filter(
+            sender=self.request.user
+        ).only('id', 'subject', 'timestamp', 'receiver')
+
+        unread_messages = Message.unread.unread_for_user(self.request.user).only('id', 'subject', 'timestamp', 'sender')
+
+        # Main inbox: messages received by the current user
+        inbox_messages = Message.objects.filter(
             receiver=self.request.user
-        ).select_related('sender', 'receiver').order_by('-timestamp')
+        ).select_related('sender', 'receiver').only('id', 'subject', 'timestamp', 'sender', 'receiver').order_by('-timestamp')
+
+        return inbox_messages
