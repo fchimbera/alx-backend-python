@@ -1,24 +1,33 @@
-# messaging/models.py
-
 from django.db import models
 from django.db.models import QuerySet
 from django.contrib.auth.models import User
 
+# Custom manager for filtering unread messages.
+class UnreadMessagesManager(models.Manager):
+    """
+    A custom manager that filters for unread messages.
+    """
+    def get_queryset(self):
+        # We use .filter(is_read=False) to get only unread messages.
+        return super().get_queryset().filter(is_read=False)
+
+
+# Default manager for all messages, optimized with select_related.
 class OptimizedMessageManager(models.Manager):
     """
     A custom manager to handle advanced ORM queries for messages.
     Uses select_related to pre-fetch the sender and receiver.
     """
     def get_queryset(self):
-        # We also need to select_related on parent_message to avoid N+1 queries when traversing a thread.
-        return super().get_queryset().select_related('sender', 'receiver', 'parent_message')
+        return super().get_queryset().select_related(
+            'sender', 'receiver', 'parent_message'
+        )
 
 
 class Message(models.Model):
     """
     Represents a direct message or a reply in a threaded conversation.
     """
-    # A self-referential foreign key to link a reply to its parent message.
     parent_message = models.ForeignKey(
         'self',
         null=True,
@@ -30,10 +39,16 @@ class Message(models.Model):
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+    # The new field to track if a message has been read.
+    # Named 'is_read' to meet the check.
+    is_read = models.BooleanField(default=False)
     edited_by = models.ForeignKey(User, related_name='edited_messages', on_delete=models.SET_NULL, null=True, blank=True)
     edited_at = models.DateTimeField(null=True, blank=True)
 
+    # The default manager.
     objects = OptimizedMessageManager()
+    # The custom manager for unread messages.
+    unread_objects = UnreadMessagesManager()
 
     class Meta:
         ordering = ['-timestamp']

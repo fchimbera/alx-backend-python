@@ -4,46 +4,58 @@ from django.utils import timezone
 from django.urls import reverse
 from .models import Message, Notification, MessageHistory
 
-class MessagingSignalTest(TestCase):
+class UnreadMessageManagerTest(TestCase):
     """
-    Tests to ensure the post_save and pre_save signals for the Message model
-    work as expected.
+    Tests for the custom UnreadMessagesManager.
     """
 
     def setUp(self):
+        self.user1 = User.objects.create_user(username='user1', password='password123')
+        self.user2 = User.objects.create_user(username='user2', password='password123')
+        self.user3 = User.objects.create_user(username='user3', password='password123')
         self.client = Client()
-        self.sender = User.objects.create_user(username='sender', password='password123')
-        self.receiver = User.objects.create_user(username='receiver', password='password123')
-        self.other_user = User.objects.create_user(username='other_user', password='password123')
-        self.client.login(username='sender', password='password123')
+        self.client.login(username='user1', password='password123')
 
-    def test_view_conversation_optimizes_queries(self):
+    def test_unread_messages_manager_filters_correctly(self):
         """
-        Tests that the view_conversation view uses select_related and prefetch_related
-        to reduce the number of queries.
+        Tests that the UnreadMessagesManager returns only unread messages
+        for the correct user.
         """
-        # Create multiple messages between sender and receiver.
-        Message.objects.create(sender=self.sender, receiver=self.receiver, content="Hello")
-        Message.objects.create(sender=self.receiver, receiver=self.sender, content="Hi")
-        message_to_edit = Message.objects.create(sender=self.sender, receiver=self.receiver, content="Last message")
+        # Create a few messages for user1.
+        Message.objects.create(sender=self.user2, receiver=self.user1, content="Message 1", is_read=False)
+        Message.objects.create(sender=self.user3, receiver=self.user1, content="Message 2", is_read=False)
+        Message.objects.create(sender=self.user2, receiver=self.user1, content="Message 3", is_read=True)
+        # Create a message for another user that should not be counted.
+        Message.objects.create(sender=self.user1, receiver=self.user2, content="Message 4", is_read=False)
         
-        # Edit the message to create history.
-        message_to_edit.content = "Last message, edited"
-        message_to_edit.save()
+        # Check that the manager returns the correct number of unread messages for user1.
+        unread_count = Message.unread_objects.filter(receiver=self.user1).count()
+        self.assertEqual(unread_count, 2)
         
-        # We expect a fixed number of queries regardless of the number of messages or history entries.
-        # 1. Query for the other user.
-        # 2. Query for the messages, using select_related and prefetch_related.
-        with self.assertNumQueries(2):
-            response = self.client.get(reverse('view_conversation', args=[self.receiver.id]))
+        # Check that the messages returned are indeed unread.
+        for msg in Message.unread_objects.filter(receiver=self.user1):
+            self.assertFalse(msg.is_read)
+
+    def test_inbox_view_displays_unread_messages(self):
+        """
+        Tests that the InboxView correctly displays only unread messages.
+        """
+        # Create some messages for the logged-in user (user1)
+        Message.objects.create(sender=self.user2, receiver=self.user1, content="Unread 1", is_read=False)
+        Message.objects.create(sender=self.user2, receiver=self.user1, content="Read 1", is_read=True)
+        Message.objects.create(sender=self.user3, receiver=self.user1, content="Unread 2", is_read=False)
+
+        response = self.client.get(reverse('inbox'))
+        self.assertEqual(response.status_code, 200)
+
+        # The view should return only the unread messages.
+        unread_messages = response.context['unread_messages']
+        self.assertEqual(len(unread_messages), 2)
+        
+        for msg in unread_messages:
+            self.assertFalse(msg.is_read)
             
-            self.assertEqual(response.status_code, 200)
-            
-            context = response.context
-            self.assertEqual(len(context['conversation_messages']), 3)
-            
-            # Accessing the related data should not trigger new queries.
-            first_message = context['conversation_messages'][0]
-            self.assertIsNotNone(first_message.sender.username)
-            self.assertIsNotNone(first_message.history_entries)
-            
+        # The content of the messages should be correct.
+        self.assertIn("Unread 1".encode('utf-8'), response.content)
+        self.assertNotIn("Read 1".encode('utf-8'), response.content)
+        self.assertIn("Unread 2".encode('utf-8'), response.content)

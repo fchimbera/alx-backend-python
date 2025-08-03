@@ -5,4 +5,5 @@ urlpatterns = [
     # ... other URL patterns ...
     path('delete/', views.delete_user, name='delete_user'),
     path('conversation/<int:user_id>/', views.view_conversation, name='view_conversation'),
+    path('inbox/', views.InboxView.as_view(), name='inbox'),
 ]

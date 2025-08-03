@@ -6,8 +6,8 @@ class MessageAdmin(admin.ModelAdmin):
     """
     Custom admin interface for the Message model.
     """
-    list_display = ('sender', 'receiver', 'parent_message', 'timestamp', 'edited_at', 'edited_by', 'content')
-    list_filter = ('timestamp', 'sender', 'receiver', 'edited_at')
+    list_display = ('sender', 'receiver', 'parent_message', 'is_read', 'timestamp', 'edited_at', 'edited_by', 'content')
+    list_filter = ('timestamp', 'sender', 'receiver', 'is_read', 'edited_at')
     search_fields = ('content', 'sender__username', 'receiver__username')
     date_hierarchy = 'timestamp'
     ordering = ('-timestamp',)
