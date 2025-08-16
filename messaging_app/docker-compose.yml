@@ -6,7 +6,7 @@ services:
     container_name: messaging-db
     restart: always
     environment:
-      - MYSQL_DATABASE=messaging_db
+      - MYSQL_DB=messaging_db
       - MYSQL_USER=admin
       - MYSQL_PASSWORD=your_password
       - MYSQL_ROOT_PASSWORD=your_root_password
