@@ -1,0 +1,15 @@
+Ignore the virtual environment directory
+myevn/
+venv/
+env/
+
+Ignore Python-specific cache and build directories
+pycache/
+*.pyc
+*.egg-info/
+
+Ignore local database files
+db.sqlite3
+
+Ignore the .git directory if you are using Git
+.git/
