@@ -5,26 +5,28 @@ services:
     image: mysql:8.0
     container_name: messaging-db
     restart: always
-    env_file:
-      - .env
+    environment:
+      - MYSQL_DATABASE=messaging_db
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=your_password
+      - MYSQL_ROOT_PASSWORD=your_root_password
     volumes:
       - mysql_data:/var/lib/mysql
     expose:
-      - "3306" # Exposes the default MySQL port internally
+      - "3306"
 
   web:
     build: .
     container_name: messaging-web
     restart: always
-    command: python manage.py runserver 0.0.0.0:8000
-    env_file:
-      - .env
+    command: python3 manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     depends_on:
       - db
-    
+
 volumes:
   mysql_data:
+    
