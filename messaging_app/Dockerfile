@@ -3,8 +3,9 @@
 # Create a file named 'Dockerfile' in the root of your project.
 
 # Use an official Python runtime as a base image.
-FROM python:3.12
-
+FROM python:3.10
+# Ensure pip is up-to-date
+RUN pip install --upgrade pip
 # Set the working directory inside the container.
 WORKDIR /app
 
@@ -24,3 +25,4 @@ EXPOSE 8000
 # Set the command to run the application. This command starts the Django development server.
 # It uses 0.0.0.0 as the host to make the server accessible from outside the container.
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# --- End of Dockerfile Content ---
