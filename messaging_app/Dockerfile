@@ -24,5 +24,6 @@ EXPOSE 8000
 
 # Set the command to run the application. This command starts the Django development server.
 # It uses 0.0.0.0 as the host to make the server accessible from outside the container.
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+CMD ["docker", "run", "-p", "8000:8000", "-d", "messaging-app"]
 # --- End of Dockerfile Content ---
