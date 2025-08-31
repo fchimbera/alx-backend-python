@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    environment {
+        PYTHON = 'python3'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/<your-username>/alx-backend-python.git',
+                    credentialsId: 'github-creds'
+            }
+        }
+
+        stage('Set up Python Environment') {
+            steps {
+                // ShiningPanda Plugin: creates a virtualenv for isolation
+                sh '''
+                python3 -m venv venv
+                source venv/bin/activate
+                pip install --upgrade pip
+                pip install -r messaging_app/requirements.txt
+                '''
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                source venv/bin/activate
+                pytest messaging_app/tests/ --junitxml=report.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'report.xml'
+                }
+            }
+        }
+    }
+
+    triggers {
+        // Manual trigger (you can also add pollSCM if needed)
+    }
+}
