@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+echo "🚀 Applying Blue Deployment update (image v2.0)..."
+kubectl apply -f blue_deployment.yaml
+
+echo "🔄 Monitoring rollout status..."
+kubectl rollout status deployment/django-blue
+
+echo "🌐 Testing app availability during rollout..."
+# Replace with your service ClusterIP/Ingress if needed
+SERVICE_IP=$(kubectl get svc django-service -o jsonpath='{.spec.clusterIP}')
+PORT=$(kubectl get svc django-service -o jsonpath='{.spec.ports[0].port}')
+
+for i in {1..20}; do
+  if curl -s http://$SERVICE_IP:$PORT/api/ >/dev/null; then
+    echo "✅ Request $i succeeded"
+  else
+    echo "❌ Request $i failed (possible downtime)"
+  fi
+  sleep 2
+done
+
+echo "📋 Verifying updated pods..."
+kubectl get pods -l app=django,version=blue -o wide
+
+echo "✅ Rolling update complete!"
