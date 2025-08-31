@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# kurbeScript - Set up and verify a local Kubernetes cluster using Minikube
+
+echo "🔍 Checking if Minikube is installed..."
+
+if ! command -v minikube &> /dev/null; then
+    echo "❌ Minikube not found. Installing Minikube..."
+    curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    sudo install minikube-linux-amd64 /usr/local/bin/minikube
+    rm minikube-linux-amd64
+    echo "✅ Minikube installed successfully."
+else
+    echo "✅ Minikube is already installed."
+fi
+
+echo "🚀 Starting Minikube cluster..."
+minikube start
+
+echo "📡 Verifying cluster status..."
+kubectl cluster-info
+
+echo "📦 Retrieving available pods in all namespaces..."
+kubectl get pods --all-namespaces
+
+echo "✅ Kubernetes cluster setup complete."
